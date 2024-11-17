@@ -1,11 +1,13 @@
 package com.example.libraryapplicationsystem.ui;
 
+import com.example.libraryapplicationsystem.models.Patron;
 import javafx.application.Application;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
 import com.example.libraryapplicationsystem.data.DatabaseConnector;
@@ -34,13 +36,17 @@ public class LibraryUI extends Application {
         // Create buttons
         Button btnAddBook = new Button("Add Book");
         Button btnViewBooks = new Button("View Books");
+        Button btnViewPatrons = new Button("View Patrons");
+        Button btnAddPatron = new Button("Add Patron");
 
         // Event handlers for buttons
         btnAddBook.setOnAction(e -> showAddBookDialog());
         btnViewBooks.setOnAction(e -> showBooksList());
+        btnViewPatrons.setOnAction(e -> showPatronList());
+        btnAddPatron.setOnAction(e -> showAddPatronForm());
 
         // Button layout
-        VBox menu = new VBox(10, btnAddBook, btnViewBooks);
+        VBox menu = new VBox(10, btnAddBook, btnViewBooks, btnViewPatrons, btnAddPatron);
         menu.setPadding(new Insets(15));
         root.setCenter(menu);
 
@@ -160,4 +166,110 @@ public class LibraryUI extends Application {
         DatabaseConnector.connect(); // Ensure database connection works
         launch(args);
     }
+
+
+
+    private void addPatronToDatabase(String name, String email, String phone) {
+        try (Connection connection = DatabaseConnector.connect()) {
+            if (connection == null) {
+                showAlert(Alert.AlertType.ERROR, "Database Error", "Unable to connect to the database.");
+                return;
+            }
+
+            String query = "INSERT INTO patrons (name, email, phone) VALUES (?, ?, ?)";
+            PreparedStatement statement = connection.prepareStatement(query);
+            statement.setString(1, name);
+            statement.setString(2, email);
+            statement.setString(3, phone);
+            statement.executeUpdate();
+            showAlert(Alert.AlertType.INFORMATION, "Success", "Patron added successfully.");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void showAddPatronForm() {
+        Stage stage = new Stage();
+        stage.setTitle("Add Patron");
+
+        VBox layout = new VBox(10);
+        layout.setPadding(new Insets(10));
+
+        TextField nameField = new TextField();
+        nameField.setPromptText("Name");
+
+        TextField emailField = new TextField();
+        emailField.setPromptText("Email");
+
+        TextField phoneField = new TextField();
+        phoneField.setPromptText("Phone");
+
+        Button addButton = new Button("Add Patron");
+        addButton.setOnAction(e -> {
+            String name = nameField.getText();
+            String email = emailField.getText();
+            String phone = phoneField.getText();
+            addPatronToDatabase(name, email, phone);
+            stage.close();
+        });
+
+        layout.getChildren().addAll(new Label("Add New Patron"), nameField, emailField, phoneField, addButton);
+
+        Scene scene = new Scene(layout, 300, 200);
+        stage.setScene(scene);
+        stage.show();
+    }
+
+    private void showPatronList() {
+        try (Connection connection = DatabaseConnector.connect()) {
+            if (connection == null) {
+                showAlert(Alert.AlertType.ERROR, "Database Error", "Unable to connect to the database.");
+                return;
+            }
+
+            String query = "SELECT * FROM patrons";
+            PreparedStatement statement = connection.prepareStatement(query);
+            ResultSet resultSet = statement.executeQuery();
+
+            Stage stage = new Stage();
+            stage.setTitle("Patron List");
+
+            TableView<Patron> table = new TableView<>();
+
+            TableColumn<Patron, Integer> idColumn = new TableColumn<>("ID");
+            idColumn.setCellValueFactory(new PropertyValueFactory<>("id"));
+
+            TableColumn<Patron, String> nameColumn = new TableColumn<>("Name");
+            nameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
+
+            TableColumn<Patron, String> emailColumn = new TableColumn<>("Email");
+            emailColumn.setCellValueFactory(new PropertyValueFactory<>("email"));
+
+            TableColumn<Patron, String> phoneColumn = new TableColumn<>("Phone");
+            phoneColumn.setCellValueFactory(new PropertyValueFactory<>("phone"));
+
+            ObservableList<Patron> patrons = FXCollections.observableArrayList();
+            while (resultSet.next()) {
+                patrons.add(new Patron(
+                        resultSet.getInt("id"),
+                        resultSet.getString("name"),
+                        resultSet.getString("email"),
+                        resultSet.getString("phone")
+                ));
+            }
+
+            table.setItems(patrons);
+            table.getColumns().addAll(idColumn, nameColumn, emailColumn, phoneColumn);
+
+            VBox layout = new VBox(table);
+            Scene scene = new Scene(layout, 600, 400);
+            stage.setScene(scene);
+            stage.show();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
 }
+
+
