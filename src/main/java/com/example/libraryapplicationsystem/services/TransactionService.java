@@ -2,12 +2,14 @@ package com.example.libraryapplicationsystem.services;
 
 import com.example.libraryapplicationsystem.data.DatabaseConnector;
 import com.example.libraryapplicationsystem.models.Transaction;
+import javafx.scene.control.Alert;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Date;
+import java.sql.Date;
 import java.util.List;
 
 public class TransactionService {
@@ -45,4 +47,9 @@ public class TransactionService {
             e.printStackTrace();
         }
     }
+
+
+    private void showAlert(Alert.AlertType alertType, String databaseError, String s) {
+    }
+
 }

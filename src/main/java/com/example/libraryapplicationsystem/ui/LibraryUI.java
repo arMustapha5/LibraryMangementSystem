@@ -14,8 +14,10 @@ import com.example.libraryapplicationsystem.data.DatabaseConnector;
 import com.example.libraryapplicationsystem.models.Book;
 
 import java.sql.Connection;
+import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.time.LocalDate;
 
 public class LibraryUI extends Application {
 
@@ -38,15 +40,17 @@ public class LibraryUI extends Application {
         Button btnViewBooks = new Button("View Books");
         Button btnViewPatrons = new Button("View Patrons");
         Button btnAddPatron = new Button("Add Patron");
+        Button btnBorrowBook = new Button("Borrow Book");
+
 
         // Event handlers for buttons
         btnAddBook.setOnAction(e -> showAddBookDialog());
         btnViewBooks.setOnAction(e -> showBooksList());
         btnViewPatrons.setOnAction(e -> showPatronList());
         btnAddPatron.setOnAction(e -> showAddPatronForm());
-
+        btnBorrowBook.setOnAction(e -> showBorrowBookForm());
         // Button layout
-        VBox menu = new VBox(10, btnAddBook, btnViewBooks, btnViewPatrons, btnAddPatron);
+        VBox menu = new VBox(10, btnAddBook, btnViewBooks, btnViewPatrons, btnAddPatron, btnBorrowBook);
         menu.setPadding(new Insets(15));
         root.setCenter(menu);
 
@@ -269,6 +273,58 @@ public class LibraryUI extends Application {
             e.printStackTrace();
         }
     }
+
+    private void borrowBook(int bookId, int patronId) {
+        try (Connection connection = DatabaseConnector.connect()) {
+            if (connection == null) {
+                showAlert(Alert.AlertType.ERROR, "Database Error", "Unable to connect to the database.");
+                return;
+            }
+
+            String query = "INSERT INTO transactions (book_id, patron_id, borrow_date) VALUES (?, ?, ?)";
+            PreparedStatement statement = connection.prepareStatement(query);
+            statement.setInt(1, bookId);
+            statement.setInt(2, patronId);
+            statement.setDate(3, Date.valueOf(LocalDate.now()));
+            statement.executeUpdate();
+            showAlert(Alert.AlertType.INFORMATION, "Success", "Book borrowed successfully.");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void showBorrowBookForm() {
+        Stage stage = new Stage();
+        stage.setTitle("Borrow Book");
+
+        VBox layout = new VBox(10);
+        layout.setPadding(new Insets(10));
+
+        TextField nameField = new TextField();
+        nameField.setPromptText("Name");
+
+        TextField emailField = new TextField();
+        emailField.setPromptText("Email");
+
+        TextField phoneField = new TextField();
+        phoneField.setPromptText("Phone");
+
+        Button addButton = new Button("Borrow Book");
+        addButton.setOnAction(e -> {
+            String name = nameField.getText();
+            String email = emailField.getText();
+            String phone = phoneField.getText();
+            addPatronToDatabase(name, email, phone);
+            stage.close();
+        });
+
+        layout.getChildren().addAll(new Label("Add New Patron"), nameField, emailField, phoneField, addButton);
+
+        Scene scene = new Scene(layout, 300, 200);
+        stage.setScene(scene);
+        stage.show();
+    }
+
 
 }
 
