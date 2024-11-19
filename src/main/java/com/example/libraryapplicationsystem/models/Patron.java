@@ -1,31 +1,32 @@
 package com.example.libraryapplicationsystem.models;
 
+import javafx.beans.property.SimpleStringProperty;
+
 public class Patron {
     private int id;
-    private String name;
-    private String email;
-    private String phone;
+    private final SimpleStringProperty name;
+    private final SimpleStringProperty email;
+    private final SimpleStringProperty phone;
 
-    public Patron(int id, String name, String email, String phone) {
-        this.id = this.id;
-        this.name = name;
-        this.email = email;
-        this.phone = phone;
+    public Patron (String name, String email, String phone) {
+        this.name = new SimpleStringProperty(name);
+        this.email = new SimpleStringProperty(email);
+        this.phone = new SimpleStringProperty(phone);
     }
 
     public int getId() {
         return id;
     }
 
-    public String getName() {
+    public SimpleStringProperty getName() {
         return name;
     }
 
-    public String getEmail() {
+    public SimpleStringProperty getEmail() {
         return email;
     }
 
-    public String getPhone() {
+    public SimpleStringProperty getPhone() {
         return phone;
     }
 

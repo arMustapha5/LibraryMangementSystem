@@ -21,7 +21,6 @@ public class PatronService {
 
             while (resultSet.next()) {
                 patrons.add(new Patron(
-                        resultSet.getInt("id"),
                         resultSet.getString("name"),
                         resultSet.getString("email"),
                         resultSet.getString("phone")

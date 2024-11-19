@@ -46,9 +46,9 @@ public class LibraryUI extends Application {
         // Event handlers for buttons
         btnAddBook.setOnAction(e -> showAddBookDialog());
         btnViewBooks.setOnAction(e -> showBooksList());
-        btnViewPatrons.setOnAction(e -> showPatronList());
-        btnAddPatron.setOnAction(e -> showAddPatronForm());
-        btnBorrowBook.setOnAction(e -> showBorrowBookForm());
+        btnViewPatrons.setOnAction(e -> showPatronsList());
+        btnAddPatron.setOnAction(e -> showAddPatronDialog());
+//        btnBorrowBook.setOnAction(e -> showBorrowBookForm());
         // Button layout
         VBox menu = new VBox(10, btnAddBook, btnViewBooks, btnViewPatrons, btnAddPatron, btnBorrowBook);
         menu.setPadding(new Insets(15));
@@ -102,6 +102,47 @@ public class LibraryUI extends Application {
         dialog.show();
     }
 
+    private void showAddPatronDialog() {
+        Stage dialog = new Stage();
+        dialog.setTitle("Add Patron");
+
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(20));
+
+        TextField nameField = new TextField();
+        TextField emailField = new TextField();
+        TextField phoneField = new TextField();
+
+        Button submitButton = new Button("Submit");
+        submitButton.setOnAction(e -> {
+            String name = nameField.getText();
+            String email = emailField.getText();
+            String phone = phoneField.getText();
+
+            if (name.isEmpty() || email.isEmpty() || phone.isEmpty()) {
+                showAlert(Alert.AlertType.ERROR, "Error", "All fields must be filled!");
+            } else {
+                addPatronToDatabase(name, email, phone);
+                dialog.close();
+                showAlert(Alert.AlertType.INFORMATION, "Success", "Patron added successfully!");
+            }
+        });
+
+        grid.add(new Label("Name:"), 0, 0);
+        grid.add(nameField, 1, 0);
+        grid.add(new Label("Email:"), 0, 1);
+        grid.add(emailField, 1, 1);
+        grid.add(new Label("Phone:"), 0, 2);
+        grid.add(phoneField, 1, 2);
+        grid.add(submitButton, 1, 3);
+
+        Scene dialogScene = new Scene(grid, 400, 300);
+        dialog.setScene(dialogScene);
+        dialog.show();
+    }
+
     private void showBooksList() {
         Stage tableStage = new Stage();
         tableStage.setTitle("Book List");
@@ -127,6 +168,31 @@ public class LibraryUI extends Application {
         tableStage.show();
     }
 
+    private void showPatronsList() {
+        Stage tableStage = new Stage();
+        tableStage.setTitle("Patron List");
+
+        TableView<Patron> tableView = new TableView<>();
+        TableColumn<Patron, String> nameColumn = new TableColumn<>("Name");
+        nameColumn.setCellValueFactory(data -> data.getValue().getName());
+        TableColumn<Patron, String> emailColumn = new TableColumn<>("Email");
+        emailColumn.setCellValueFactory(data -> data.getValue().getEmail());
+        TableColumn<Patron, String> phoneColumn = new TableColumn<>("Phone");
+        phoneColumn.setCellValueFactory(data -> data.getValue().getPhone());
+
+        tableView.getColumns().addAll(nameColumn, emailColumn, phoneColumn);
+
+        ObservableList<Patron> patronList = fetchPatronsFromDatabase();
+        tableView.setItems(patronList);
+
+        VBox vbox = new VBox(tableView);
+        vbox.setPadding(new Insets(10));
+
+        Scene scene = new Scene(vbox, 500, 400);
+        tableStage.setScene(scene);
+        tableStage.show();
+    }
+
     private void addBookToDatabase(String title, String author, String year) {
         try (Connection connection = DatabaseConnector.connect()) {
             String query = "INSERT INTO books (title, author, year) VALUES (?, ?, ?)";
@@ -134,6 +200,19 @@ public class LibraryUI extends Application {
             statement.setString(1, title);
             statement.setString(2, author);
             statement.setString(3, year);
+            statement.executeUpdate();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void addPatronToDatabase(String name, String email, String phone) {
+        try (Connection connection = DatabaseConnector.connect()) {
+            String query = "INSERT INTO patrons (name, email, phone) VALUES (?, ?, ?)";
+            PreparedStatement statement = connection.prepareStatement(query);
+            statement.setString(1, name);
+            statement.setString(2, email);
+            statement.setString(3, phone);
             statement.executeUpdate();
         } catch (Exception e) {
             e.printStackTrace();
@@ -159,6 +238,25 @@ public class LibraryUI extends Application {
         return books;
     }
 
+    private ObservableList<Patron> fetchPatronsFromDatabase() {
+        ObservableList<Patron> patrons = FXCollections.observableArrayList();
+        try (Connection connection = DatabaseConnector.connect()) {
+            String query = "SELECT * FROM patrons";
+            PreparedStatement statement = connection.prepareStatement(query);
+            ResultSet resultSet = statement.executeQuery();
+            while (resultSet.next()) {
+                patrons.add(new Patron(
+                        resultSet.getString("name"),
+                        resultSet.getString("email"),
+                        resultSet.getString("phone")
+                ));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return patrons;
+    }
+
     private void showAlert(Alert.AlertType type, String title, String message) {
         Alert alert = new Alert(type);
         alert.setTitle(title);
@@ -169,160 +267,6 @@ public class LibraryUI extends Application {
     public static void main(String[] args) {
         DatabaseConnector.connect(); // Ensure database connection works
         launch(args);
-    }
-
-
-
-    private void addPatronToDatabase(String name, String email, String phone) {
-        try (Connection connection = DatabaseConnector.connect()) {
-            if (connection == null) {
-                showAlert(Alert.AlertType.ERROR, "Database Error", "Unable to connect to the database.");
-                return;
-            }
-
-            String query = "INSERT INTO patrons (name, email, phone) VALUES (?, ?, ?)";
-            PreparedStatement statement = connection.prepareStatement(query);
-            statement.setString(1, name);
-            statement.setString(2, email);
-            statement.setString(3, phone);
-            statement.executeUpdate();
-            showAlert(Alert.AlertType.INFORMATION, "Success", "Patron added successfully.");
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void showAddPatronForm() {
-        Stage stage = new Stage();
-        stage.setTitle("Add Patron");
-
-        VBox layout = new VBox(10);
-        layout.setPadding(new Insets(10));
-
-        TextField nameField = new TextField();
-        nameField.setPromptText("Name");
-
-        TextField emailField = new TextField();
-        emailField.setPromptText("Email");
-
-        TextField phoneField = new TextField();
-        phoneField.setPromptText("Phone");
-
-        Button addButton = new Button("Add Patron");
-        addButton.setOnAction(e -> {
-            String name = nameField.getText();
-            String email = emailField.getText();
-            String phone = phoneField.getText();
-            addPatronToDatabase(name, email, phone);
-            stage.close();
-        });
-
-        layout.getChildren().addAll(new Label("Add New Patron"), nameField, emailField, phoneField, addButton);
-
-        Scene scene = new Scene(layout, 300, 200);
-        stage.setScene(scene);
-        stage.show();
-    }
-
-    private void showPatronList() {
-        try (Connection connection = DatabaseConnector.connect()) {
-            if (connection == null) {
-                showAlert(Alert.AlertType.ERROR, "Database Error", "Unable to connect to the database.");
-                return;
-            }
-
-            String query = "SELECT * FROM patrons";
-            PreparedStatement statement = connection.prepareStatement(query);
-            ResultSet resultSet = statement.executeQuery();
-
-            Stage stage = new Stage();
-            stage.setTitle("Patron List");
-
-            TableView<Patron> table = new TableView<>();
-
-            TableColumn<Patron, Integer> idColumn = new TableColumn<>("ID");
-            idColumn.setCellValueFactory(new PropertyValueFactory<>("id"));
-
-            TableColumn<Patron, String> nameColumn = new TableColumn<>("Name");
-            nameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
-
-            TableColumn<Patron, String> emailColumn = new TableColumn<>("Email");
-            emailColumn.setCellValueFactory(new PropertyValueFactory<>("email"));
-
-            TableColumn<Patron, String> phoneColumn = new TableColumn<>("Phone");
-            phoneColumn.setCellValueFactory(new PropertyValueFactory<>("phone"));
-
-            ObservableList<Patron> patrons = FXCollections.observableArrayList();
-            while (resultSet.next()) {
-                patrons.add(new Patron(
-                        resultSet.getInt("id"),
-                        resultSet.getString("name"),
-                        resultSet.getString("email"),
-                        resultSet.getString("phone")
-                ));
-            }
-
-            table.setItems(patrons);
-            table.getColumns().addAll(idColumn, nameColumn, emailColumn, phoneColumn);
-
-            VBox layout = new VBox(table);
-            Scene scene = new Scene(layout, 600, 400);
-            stage.setScene(scene);
-            stage.show();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void borrowBook(int bookId, int patronId) {
-        try (Connection connection = DatabaseConnector.connect()) {
-            if (connection == null) {
-                showAlert(Alert.AlertType.ERROR, "Database Error", "Unable to connect to the database.");
-                return;
-            }
-
-            String query = "INSERT INTO transactions (book_id, patron_id, borrow_date) VALUES (?, ?, ?)";
-            PreparedStatement statement = connection.prepareStatement(query);
-            statement.setInt(1, bookId);
-            statement.setInt(2, patronId);
-            statement.setDate(3, Date.valueOf(LocalDate.now()));
-            statement.executeUpdate();
-            showAlert(Alert.AlertType.INFORMATION, "Success", "Book borrowed successfully.");
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void showBorrowBookForm() {
-        Stage stage = new Stage();
-        stage.setTitle("Borrow Book");
-
-        VBox layout = new VBox(10);
-        layout.setPadding(new Insets(10));
-
-        TextField nameField = new TextField();
-        nameField.setPromptText("Name");
-
-        TextField emailField = new TextField();
-        emailField.setPromptText("Email");
-
-        TextField phoneField = new TextField();
-        phoneField.setPromptText("Phone");
-
-        Button addButton = new Button("Borrow Book");
-        addButton.setOnAction(e -> {
-            String name = nameField.getText();
-            String email = emailField.getText();
-            String phone = phoneField.getText();
-            addPatronToDatabase(name, email, phone);
-            stage.close();
-        });
-
-        layout.getChildren().addAll(new Label("Add New Patron"), nameField, emailField, phoneField, addButton);
-
-        Scene scene = new Scene(layout, 300, 200);
-        stage.setScene(scene);
-        stage.show();
     }
 
 
